@@ -31,7 +31,7 @@ class Web3Bot:
         """اتصال به شبکه Polygon"""
         try:
             self.w3 = Web3(Web3.WebsocketProvider(
-                os.getenv('POLYGON_WSS'),
+                os.getenv('wss://multi-clean-layer.matic.quiknode.pro/2b16ec02f2a4dcccd9e842e6a34025281895ab0d/'),
                 websocket_kwargs={
                     'timeout': 30,
                     'ping_interval': 10,
@@ -80,7 +80,7 @@ class Web3Bot:
     def run_bot(self):
         """اجرای ربات تلگرام"""
         try:
-            self.app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
+            self.app = Application.builder().token(os.getenv('7470701266:AAEr2moa9lmKqn2pKsrRMtGrYQo93vl0SH4')).build()
             
             # ثبت handlerها
             self.app.add_handler(CommandHandler("start", self.start))
