@@ -6,6 +6,8 @@ services:
     startCommand: python app.py
     envVars:
       - key: TELEGRAM_TOKEN
-        value: your_telegram_token_here
+        value: your_telegram_token
       - key: POLYGON_WSS
-        value: your_polygon_wss_url_here
+        value: your_polygon_wss_url
+      - key: PORT
+        value: 8000
