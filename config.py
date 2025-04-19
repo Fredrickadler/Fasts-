@@ -1,10 +1,8 @@
-# config.py
-
 # تنظیمات ربات تلگرام
-TELEGRAM_BOT_TOKEN = "توکن_ربات_تلگرام_شما"
+TELEGRAM_BOT_TOKEN = "7678697695:AAGAu62W-RwXgTt7igKQWy-Yxl4NM5O9JIo"
 
 # تنظیمات Infura (برای اتریوم)
-INFURA_PROJECT_ID = "شناسه_پروژه_Infura_شما"
+INFURA_PROJECT_ID = "YOUR_INFURA_PROJECT_ID"  # جایگزین کنید با شناسه پروژه Infura خودتان
 
 # تنظیمات شبکه‌ها
 NETWORKS = {
