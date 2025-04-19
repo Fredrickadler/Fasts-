@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "*.py",
+      "use": "@vercel/python",
+      "config": { 
+        "installCommand": "python -m pip install -r requirements.txt"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "auto_transfer_bot.py"
+    }
+  ]
+}
