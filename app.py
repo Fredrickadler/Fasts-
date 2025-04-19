@@ -8,8 +8,8 @@ import asyncio
 load_dotenv()
 
 # Configuration
-TOKEN = os.getenv('TELEGRAM_TOKEN')
-NETWORK_URL = os.getenv('POLYGON_WSS')
+TOKEN = os.getenv('7470701266:AAEr2moa9lmKqn2pKsrRMtGrYQo93vl0SH4')
+NETWORK_URL = os.getenv('wss://multi-clean-layer.matic.quiknode.pro/2b16ec02f2a4dcccd9e842e6a34025281895ab0d/')
 
 # Global variables
 private_key = None
