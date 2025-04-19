@@ -1,104 +1,118 @@
 import os
 import logging
 from threading import Thread
-from dotenv import load_dotenv
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from web3 import Web3
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from fastapi import FastAPI
 import uvicorn
 
-# تنظیمات لاگ
+# تنظیمات پیشرفته لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('bot.log')
+    ]
 )
 logger = logging.getLogger(__name__)
 
-# بارگذاری متغیرهای محیطی
+# بارگذاری محیط
+from dotenv import load_dotenv
 load_dotenv()
 
-# تنظیمات اصلی
-TELEGRAM_TOKEN = os.getenv('7470701266:AAEr2moa9lmKqn2pKsrRMtGrYQo93vl0SH4')
-NETWORK_URL = os.getenv('wss://multi-clean-layer.matic.quiknode.pro/2b16ec02f2a4dcccd9e842e6a34025281895ab0d/')
-
-class TelegramBot:
+class Web3Bot:
     def __init__(self):
+        self.app = None
         self.w3 = None
-        self.user_data = {}
 
-    def connect_to_network(self):
+    async def connect_web3(self):
+        """اتصال به شبکه Polygon"""
         try:
             self.w3 = Web3(Web3.WebsocketProvider(
-                NETWORK_URL,
+                os.getenv('POLYGON_WSS'),
                 websocket_kwargs={
                     'timeout': 30,
-                    'ping_interval': 60,
-                    'ping_timeout': 30
+                    'ping_interval': 10,
+                    'ping_timeout': 5
                 }
             ))
             if not self.w3.is_connected():
-                logger.error("اتصال به شبکه ناموفق بود")
+                logger.error("❌ اتصال به شبکه Polygon ناموفق")
                 return False
             
-            logger.info(f"اتصال موفق به شبکه - آخرین بلاک: {self.w3.eth.block_number}")
+            logger.info(f"✅ Connected to Polygon. Chain ID: {self.w3.eth.chain_id}")
             return True
             
         except Exception as e:
-            logger.error(f"خطا در اتصال به شبکه: {str(e)}")
+            logger.error(f"Web3 Connection Error: {str(e)}")
             return False
 
-    async def start(self, update, context):
+    async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /start"""
         user = update.effective_user
-        logger.info(f"کاربر شروع کرد: {user.id}")
-        await update.message.reply_text(f"سلام {user.first_name}!\nلطفاً کلید خصوصی خود را ارسال کنید.")
+        logger.info(f"User {user.id} started conversation")
+        await update.message.reply_html(
+            f"👋 سلام <b>{user.first_name}</b>!\n"
+            "لطفاً کلید خصوصی خود را ارسال کنید:"
+        )
 
-    async def handle_private_key(self, update, context):
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """پردازش پیام‌های کاربر"""
         user_id = update.effective_user.id
-        self.user_data[user_id] = {'private_key': update.message.text}
-        logger.info(f"کلید خصوصی دریافت شد از کاربر: {user_id}")
-        await update.message.reply_text("کلید خصوصی ذخیره شد. لطفاً آدرس مقصد را ارسال کنید.")
-
-    async def handle_target_wallet(self, update, context):
-        user_id = update.effective_user.id
-        if user_id in self.user_data:
-            self.user_data[user_id]['target_wallet'] = update.message.text
-            logger.info(f"آدرس مقصد دریافت شد از کاربر: {user_id}")
-            await update.message.reply_text(
-                f"تنظیمات کامل شد!\n"
-                f"آدرس مقصد: {update.message.text}\n"
-                f"شما می‌توانید تراکنش‌ها را بررسی کنید."
-            )
+        text = update.message.text
+        
+        if 'private_key' not in context.user_data:
+            context.user_data['private_key'] = text
+            logger.info(f"User {user_id} submitted private key")
+            await update.message.reply_text("🔑 کلید خصوصی دریافت شد. حالا آدرس مقصد را ارسال کنید:")
         else:
-            await update.message.reply_text("لطفاً ابتدا کلید خصوصی خود را ارسال کنید.")
+            context.user_data['target_wallet'] = text
+            logger.info(f"User {user_id} submitted target wallet: {text}")
+            await update.message.reply_text(
+                f"✅ تنظیمات کامل شد!\n"
+                f"آدرس مقصد: <code>{text}</code>\n"
+                f"ربات آماده دریافت دستورات است.",
+                parse_mode='HTML'
+            )
 
-    def run(self):
-        if not self.connect_to_network():
-            return
+    def run_bot(self):
+        """اجرای ربات تلگرام"""
+        try:
+            self.app = Application.builder().token(os.getenv('TELEGRAM_TOKEN')).build()
+            
+            # ثبت handlerها
+            self.app.add_handler(CommandHandler("start", self.start))
+            self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+            
+            logger.info("🤖 Telegram Bot is running...")
+            self.app.run_polling()
+        except Exception as e:
+            logger.critical(f"Bot failed: {str(e)}")
 
-        application = Application.builder().token(TELEGRAM_TOKEN).build()
-        
-        application.add_handler(CommandHandler("start", self.start))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_private_key))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_target_wallet))
-        
-        logger.info("ربات تلگرام در حال اجرا...")
-        application.run_polling()
-
-# FastAPI App برای Render
-app = FastAPI()
-
-@app.get("/")
-def health_check():
-    return {"status": "active", "service": "Telegram Web3 Bot"}
-
-def run_bot():
-    bot = TelegramBot()
-    bot.run()
+def run_fastapi():
+    """سرور HTTP برای Render"""
+    app = FastAPI()
+    
+    @app.get("/")
+    async def health_check():
+        return {"status": "OK", "service": "Web3 Telegram Bot"}
+    
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv('PORT', 8000)))
 
 if __name__ == "__main__":
-    # اجرای ربات در یک ترد جداگانه
-    bot_thread = Thread(target=run_bot)
+    # ایجاد نمونه ربات
+    bot = Web3Bot()
+    
+    # تست اتصال به شبکه
+    if not bot.connect_web3():
+        logger.error("Failed to connect to blockchain. Exiting...")
+        exit(1)
+    
+    # اجرای ربات در ترد جداگانه
+    bot_thread = Thread(target=bot.run_bot, daemon=True)
     bot_thread.start()
     
-    # اجرای سرور FastAPI
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+    # اجرای سرور HTTP
+    run_fastapi()
