@@ -4,33 +4,12 @@ from web3 import Web3
 from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
+# تنظیمات وارد شده از فایل کانفیگ
+from config import TELEGRAM_BOT_TOKEN, NETWORKS, CHECK_INTERVAL, GAS_LIMIT
+
 # تنظیمات لاگ
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# شبکه‌های پشتیبانی شده
-NETWORKS = {
-    'ethereum': {
-        'rpc': 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID',
-        'scan': 'https://etherscan.io/tx/',
-        'chain_id': 1
-    },
-    'bsc': {
-        'rpc': 'https://bsc-dataseed.binance.org/',
-        'scan': 'https://bscscan.com/tx/',
-        'chain_id': 56
-    },
-    'polygon': {
-        'rpc': 'https://polygon-rpc.com/',
-        'scan': 'https://polygonscan.com/tx/',
-        'chain_id': 137
-    },
-    'base': {
-        'rpc': 'https://mainnet.base.org',
-        'scan': 'https://basescan.org/tx/',
-        'chain_id': 8453
-    }
-}
 
 # وضعیت کاربران
 user_data = {}
@@ -59,7 +38,7 @@ class WalletMonitor:
                 except Exception as e:
                     logger.error(f"Error monitoring {net}: {e}")
             
-            await asyncio.sleep(30 / 1000)  # 30 میلی‌ثانیه
+            await asyncio.sleep(CHECK_INTERVAL)
     
     async def transfer_funds(self, network, amount):
         try:
@@ -68,8 +47,7 @@ class WalletMonitor:
             
             # محاسبه کارمزد شبکه
             gas_price = w3.eth.gas_price
-            gas_limit = 21000  # حد استاندارد برای انتقال ETH
-            fee = gas_price * gas_limit
+            fee = gas_price * GAS_LIMIT
             
             if amount <= fee:
                 logger.warning(f"Insufficient balance on {network} to cover fees")
@@ -81,7 +59,7 @@ class WalletMonitor:
             tx = {
                 'to': self.destination_wallet,
                 'value': transfer_amount,
-                'gas': gas_limit,
+                'gas': GAS_LIMIT,
                 'gasPrice': gas_price,
                 'nonce': w3.eth.get_transaction_count(account.address),
                 'chainId': NETWORKS[network]['chain_id']
@@ -167,7 +145,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     # تنظیمات ربات تلگرام
-    application = Application.builder().token("YOUR_TELEGRAM_BOT_TOKEN").build()
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
     
     # ثبت هندلرها
     application.add_handler(CommandHandler("start", start))
