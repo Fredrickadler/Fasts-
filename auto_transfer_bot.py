@@ -1,170 +1,79 @@
-import asyncio
-import logging
 from web3 import Web3
-from telegram import Update, Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import time
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 
-# تنظیمات وارد شده از فایل کانفیگ
-from config import TELEGRAM_BOT_TOKEN, NETWORKS, CHECK_INTERVAL, GAS_LIMIT
+# تنظیمات ربات تلگرام
+TOKEN = "7470701266:AAEr2moa9lmKqn2pKsrRMtGrYQo93vl0SH4"
+updater = Updater(TOKEN, use_context=True)
+dispatcher = updater.dispatcher
 
-# تنظیمات لاگ
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-logger = logging.getLogger(__name__)
+# متغیرهای امنیتی
+private_key = None
+target_wallet = None
+w3 = None
 
-# وضعیت کاربران
-user_data = {}
+# WebSocket URLs برای شبکه‌های مختلف
+network_urls = {
+    'polygon': "wss://multi-clean-layer.matic.quiknode.pro/2b16ec02f2a4dcccd9e842e6a34025281895ab0d/",
+    'ethereum': "wss://mainnet.infura.io/ws/v3/YOUR_INFURA_PROJECT_ID",
+    'bsc': "wss://bsc-ws-node.nariox.org:443",
+    'polygon_base': "wss://rpc-mainnet.maticvigil.com/ws"
+}
 
-class WalletMonitor:
-    def __init__(self, private_key, destination_wallet, networks_to_monitor):
-        self.private_key = private_key
-        self.destination_wallet = destination_wallet
-        self.networks = networks_to_monitor
-        self.web3_instances = {}
-        
-        for net in self.networks:
-            self.web3_instances[net] = Web3(Web3.HTTPProvider(NETWORKS[net]['rpc']))
-    
-    async def monitor_wallets(self):
-        while True:
-            for net in self.networks:
-                try:
-                    w3 = self.web3_instances[net]
-                    account = w3.eth.account.from_key(self.private_key)
-                    balance = w3.eth.get_balance(account.address)
-                    
-                    if balance > 0:
-                        logger.info(f"Found balance on {net}: {w3.from_wei(balance, 'ether')} ETH")
-                        await self.transfer_funds(net, balance)
-                except Exception as e:
-                    logger.error(f"Error monitoring {net}: {e}")
-            
-            await asyncio.sleep(CHECK_INTERVAL)
-    
-    async def transfer_funds(self, network, amount):
-        try:
-            w3 = self.web3_instances[network]
-            account = w3.eth.account.from_key(self.private_key)
-            
-            # محاسبه کارمزد شبکه
-            gas_price = w3.eth.gas_price
-            fee = gas_price * GAS_LIMIT
-            
-            if amount <= fee:
-                logger.warning(f"Insufficient balance on {network} to cover fees")
-                return
-            
-            transfer_amount = amount - fee
-            
-            # ساخت تراکنش
-            tx = {
-                'to': self.destination_wallet,
-                'value': transfer_amount,
-                'gas': GAS_LIMIT,
-                'gasPrice': gas_price,
-                'nonce': w3.eth.get_transaction_count(account.address),
-                'chainId': NETWORKS[network]['chain_id']
-            }
-            
-            # امضای تراکنش
-            signed_tx = w3.eth.account.sign_transaction(tx, self.private_key)
-            
-            # ارسال تراکنش
-            tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-            tx_url = f"{NETWORKS[network]['scan']}{tx_hash.hex()}"
-            
-            logger.info(f"Transferred {w3.from_wei(transfer_amount, 'ether')} ETH from {network} to {self.destination_wallet}")
-            logger.info(f"Transaction: {tx_url}")
-            
-            return tx_url
-        except Exception as e:
-            logger.error(f"Error transferring funds on {network}: {e}")
-            raise
-
-# دستورات ربات تلگرام
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "سلام! ربات انتقال خودکار توکن‌ها خوش آمدید.\n"
-        "لطفا کلید خصوصی ولت خود را ارسال کنید (این اطلاعات ذخیره نمی‌شوند):"
-    )
-
-async def handle_private_key(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    private_key = update.message.text.strip()
-    
-    # اعتبارسنجی اولیه کلید خصوصی
-    if not private_key.startswith('0x') or len(private_key) != 66:
-        await update.message.reply_text("کلید خصوصی نامعتبر است. لطفا دوباره ارسال کنید.")
-        return
-    
-    user_data[user_id] = {'private_key': private_key}
-    await update.message.reply_text(
-        "کلید خصوصی دریافت شد.\n"
-        "لطفا آدرس ولت مقصد را ارسال کنید:"
-    )
-
-async def handle_destination_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    destination_wallet = update.message.text.strip()
-    
-    # اعتبارسنجی آدرس ولت
-    if not Web3.is_address(destination_wallet):
-        await update.message.reply_text("آدرس ولت نامعتبر است. لطفا دوباره ارسال کنید.")
-        return
-    
-    if user_id not in user_data or 'private_key' not in user_data[user_id]:
-        await update.message.reply_text("لطفا ابتدا کلید خصوصی خود را ارسال کنید.")
-        return
-    
-    user_data[user_id]['destination_wallet'] = destination_wallet
-    
-    # شروع مانیتورینگ
-    networks_to_monitor = ['ethereum', 'bsc', 'polygon', 'base']
-    monitor = WalletMonitor(
-        private_key=user_data[user_id]['private_key'],
-        destination_wallet=destination_wallet,
-        networks_to_monitor=networks_to_monitor
-    )
-    
-    # حذف کلید خصوصی از حافظه پس از استفاده
-    del user_data[user_id]['private_key']
-    
-    asyncio.create_task(monitor.monitor_wallets())
-    await update.message.reply_text(
-        "مانیتورینگ ولت‌ها شروع شد!\n"
-        "هر گونه واریزی به ولت‌های زیر به صورت خودکار به ولت مقصد منتقل خواهد شد:\n"
-        "- Ethereum\n"
-        "- Binance Smart Chain\n"
-        "- Polygon\n"
-        "- Base"
-    )
-
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.error(f"Update {update} caused error {context.error}")
-    if update.message:
-        await update.message.reply_text("خطایی رخ داده است. لطفا دوباره تلاش کنید.")
-
-def main():
-    # تنظیمات ربات تلگرام
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-    
-    # ثبت هندلرها
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    application.add_error_handler(error_handler)
-    
-    # شروع ربات
-    application.run_polling()
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    
-    if user_id in user_data:
-        if 'private_key' in user_data[user_id] and 'destination_wallet' not in user_data[user_id]:
-            await handle_destination_wallet(update, context)
+# اتصال به شبکه انتخابی
+def connect_to_network(network_name):
+    global w3
+    if network_name in network_urls:
+        w3 = Web3(Web3.WebsocketProvider(network_urls[network_name]))
+        if w3.isConnected():
+            print(f"Connected to {network_name} network via WebSocket!")
+            return True
         else:
-            await update.message.reply_text("ربات در حال مانیتورینگ است. برای شروع جدید از /start استفاده کنید.")
+            print(f"Failed to connect to {network_name} network.")
+            return False
     else:
-        await handle_private_key(update, context)
+        print("Network not recognized.")
+        return False
 
-if __name__ == '__main__':
-    main()
+# فرمان شروع ربات تلگرام
+def start(update, context):
+    update.message.reply_text("سلام! برای شروع، لطفاً پرایوت کی خود رو وارد کن.")
+
+# ذخیره پرایوت کی
+def handle_private_key(update, context):
+    global private_key
+    private_key = update.message.text
+    update.message.reply_text("پرایوت کی ذخیره شد. حالا لطفاً آدرس ولتی که می‌خواهید توکن‌ها به آن انتقال یابند، وارد کنید.")
+
+# ذخیره آدرس مقصد
+def handle_target_wallet(update, context):
+    global target_wallet
+    target_wallet = update.message.text
+    update.message.reply_text(f"آدرس مقصد ذخیره شد: {target_wallet}. رصد کیف پول شما شروع می‌شود.")
+
+    # شروع رصد کیف پول
+    monitor_network()
+
+# اضافه کردن هندلرها برای تلگرام
+start_handler = CommandHandler('start', start)
+dispatcher.add_handler(start_handler)
+private_key_handler = MessageHandler(Filters.text & ~Filters.command, handle_private_key)
+dispatcher.add_handler(private_key_handler)
+target_wallet_handler = MessageHandler(Filters.text & ~Filters.command, handle_target_wallet)
+dispatcher.add_handler(target_wallet_handler)
+
+# بررسی وضعیت بلاک
+def get_latest_block():
+    if w3:
+        block = w3.eth.get_block('latest')
+        print(f"Latest block: {block['number']}")
+
+# رصد تراکنش‌ها و وضعیت بلاک
+def monitor_network():
+    while True:
+        get_latest_block()  # وضعیت آخرین بلاک رو چک می‌کنیم
+        time.sleep(5)  # هر 5 ثانیه یکبار وضعیت رو بررسی می‌کنیم
+
+# شروع ربات تلگرام
+updater.start_polling()
+updater.idle()
