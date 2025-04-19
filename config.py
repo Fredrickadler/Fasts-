@@ -2,7 +2,7 @@
 
 # تنظیمات تلگرام (حتماً توکن ربات را بررسی کنید)
 TELEGRAM_BOT_TOKEN = "7678697695:AAGAu62W-RwXgTt7igKQWy-Yxl4NM5O9JIo"
-TELEGRAM_ADMINS = [123456789]  # عددی UserID شما در تلگرام (از @userinfobot بگیرید)
+TELEGRAM_ADMINS = [6329203972]  # عددی UserID شما در تلگرام (از @userinfobot بگیرید)
 
 # تنظیمات شبکه‌ها با RPCهای پرسرعت
 NETWORKS = {
