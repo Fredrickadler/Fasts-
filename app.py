@@ -45,7 +45,7 @@ def main():
     global w3
     w3 = Web3(Web3.WebsocketProvider(NETWORK_URL))
     
-    if not w3.isConnected():
+    if not w3.is_connected():  # این خط اصلاح شده است
         print("Failed to connect to network")
         return
 
