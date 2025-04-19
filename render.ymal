@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: telegram-web3-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        value: your_telegram_token_here
+      - key: POLYGON_WSS
+        value: your_polygon_wss_url_here
