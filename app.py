@@ -80,7 +80,7 @@ class Web3Bot:
     def run_bot(self):
         """اجرای ربات تلگرام"""
         try:
-            self.app = Application.builder().token(os.getenv('7470701266:AAEr2moa9lmKqn2pKsrRMtGrYQo93vl0SH4')).build()
+            self.app = Application.builder().token(os.getenv('7678697695:AAGAu62W-RwXgTt7igKQWy-Yxl4NM5O9JIo')).build()
             
             # ثبت handlerها
             self.app.add_handler(CommandHandler("start", self.start))
